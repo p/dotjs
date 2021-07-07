@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
 if (%w( -h --help -help help ) & ARGV).length > 0
-  puts "usage: djsd [-hv]"
+  puts "usage: djsd [-dhv]"
   puts "starts dotjs server in the foreground. kill with ^C"
   exit
 end
