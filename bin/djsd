@@ -1,15 +1,26 @@
 #!/usr/bin/env ruby
 
-if (%w( -h --help -help help ) & ARGV).length > 0
-  puts "usage: djsd [-dhv]"
-  puts "starts dotjs server in the foreground. kill with ^C"
-  exit
-end
+require 'optparse'
 
-if ARGV.include?('-v')
-  puts "djsd 2.0"
-  exit
-end
+options = {}
+OptionParser.new do |opts|
+  opts.banner = "Usage: djsd [-h|--help] [-v|--version] [-d|--dir PATH]"
+
+  opts.on("-h", "--help", "Show usage") do
+    puts "usage: djsd [-dhv]"
+    puts "starts dotjs server in the foreground. kill with ^C"
+    exit
+  end
+
+  opts.on("-v", "--version", "Show version") do
+    puts "djsd 2.0"
+    exit
+  end
+
+  opts.on('-d', '--dir=PATH', '.js directory') do |v|
+    Dir.chdir(v)
+  end
+end.parse!
 
 require 'webrick'
 require 'webrick/https'
