@@ -1,31 +1,18 @@
 #!/usr/bin/env ruby
 
 require 'optparse'
-
-options = {}
-OptionParser.new do |opts|
-  opts.banner = "Usage: djsd [-h|--help] [-v|--version] [-d|--dir PATH]"
-
-  opts.on("-h", "--help", "Show usage") do
-    puts "usage: djsd [-dhv]"
-    puts "starts dotjs server in the foreground. kill with ^C"
-    exit
-  end
-
-  opts.on("-v", "--version", "Show version") do
-    puts "djsd 2.0"
-    exit
-  end
-
-  opts.on('-d', '--dir=PATH', '.js directory') do |v|
-    Dir.chdir(v)
-  end
-end.parse!
-
 require 'webrick'
 require 'webrick/https'
 
-dotjs = Class.new(WEBrick::HTTPServlet::AbstractServlet) do
+class Servlet < WEBrick::HTTPServlet::AbstractServlet
+  class << self
+    attr_accessor :dir
+  end
+
+  def absolutize(path)
+    File.join(self.class.dir, path)
+  end
+
   def do_GET(request, response)
     body = build_body(request.path)
 
@@ -38,11 +25,11 @@ dotjs = Class.new(WEBrick::HTTPServlet::AbstractServlet) do
   end
 
   def build_body(path)
-    files = [File.expand_path("default.js")]
+    files = [absolutize("default.js")]
     paths = path.gsub('/','').split('.')
 
     until paths.empty?
-      file = File.expand_path(paths.join('.'))
+      file = absolutize(paths.join('.'))
       files << file if File.file?(file)
       paths.shift
     end
@@ -67,6 +54,25 @@ dotjs = Class.new(WEBrick::HTTPServlet::AbstractServlet) do
   end
 end
 
+OptionParser.new do |opts|
+  opts.banner = "Usage: djsd [-h|--help] [-v|--version] [-d|--dir PATH]"
+
+  opts.on("-h", "--help", "Show usage") do
+    puts "Usage: djsd [-h|--help] [-v|--version] [-d|--dir PATH]"
+    puts "starts dotjs server in the foreground. kill with ^C"
+    exit
+  end
+
+  opts.on("-v", "--version", "Show version") do
+    puts "djsd 2.0"
+    exit
+  end
+
+  opts.on('-d', '--dir=PATH', '.js directory') do |v|
+    Servlet.dir = v
+  end
+end.parse!
+
 ssl_info = DATA.read
 ssl_cert = ssl_info.scan(/(-----BEGIN CERTIFICATE-----.+?-----END CERTIFICATE-----)/m)[0][0]
 ssl_key  = ssl_info.scan(/(-----BEGIN RSA PRIVATE KEY-----.+?-----END RSA PRIVATE KEY-----)/m)[0][0]
@@ -83,7 +89,7 @@ server_options = {
 }
 
 server = WEBrick::HTTPServer.new(server_options)
-server.mount('/', dotjs)
+server.mount('/', Servlet)
 
 %w( INT TERM ).each do |sig|
   trap(sig) { server.shutdown }
