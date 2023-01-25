@@ -54,8 +54,10 @@ class Servlet < WEBrick::HTTPServlet::AbstractServlet
   end
 end
 
+options = {}
+
 OptionParser.new do |opts|
-  opts.banner = "Usage: djsd [-h|--help] [-v|--version] [-d|--dir PATH]"
+  opts.banner = "Usage: djsd [options]"
 
   opts.on('-d', '--dir=PATH', '.js directory') do |v|
     unless File.exist?(v)
@@ -65,9 +67,17 @@ OptionParser.new do |opts|
   end
 
   opts.on("-h", "--help", "Show usage") do
-    puts "Usage: djsd [-h|--help] [-v|--version] [-d|--dir PATH]"
+    puts opts
     puts "starts dotjs server in the foreground. kill with ^C"
     exit
+  end
+
+  opts.on('-p', '--port=PORT', 'Port number to bind to (default: 3131)') do |v|
+    options[:port] = Integer(v)
+  end
+
+  opts.on("-t", "--http", "Use HTTP instead of HTTPS (requires an HTTPS reverse proxy for practical usage)") do
+    options[:http] = true
   end
 
   opts.on("-v", "--version", "Show version") do
@@ -76,20 +86,29 @@ OptionParser.new do |opts|
   end
 end.parse!
 
-ssl_info = DATA.read
-ssl_cert = ssl_info.scan(/(-----BEGIN CERTIFICATE-----.+?-----END CERTIFICATE-----)/m)[0][0]
-ssl_key  = ssl_info.scan(/(-----BEGIN RSA PRIVATE KEY-----.+?-----END RSA PRIVATE KEY-----)/m)[0][0]
+server_options = if options[:http]
+  {
+    :BindAddress => "127.0.0.1",
+    :Port => options.fetch(:port, 3131),
+    :AccessLog => [],
+    :SSLEnable => false,
+  }
+else
+  ssl_info = DATA.read
+  ssl_cert = ssl_info.scan(/(-----BEGIN CERTIFICATE-----.+?-----END CERTIFICATE-----)/m)[0][0]
+  ssl_key  = ssl_info.scan(/(-----BEGIN RSA PRIVATE KEY-----.+?-----END RSA PRIVATE KEY-----)/m)[0][0]
 
-server_options = {
-  :BindAddress => "127.0.0.1",
-  :Port => 3131,
-  :AccessLog => [],
-  :SSLEnable => true,
-  :SSLVerifyClient => OpenSSL::SSL::VERIFY_NONE,
-  :SSLPrivateKey => OpenSSL::PKey::RSA.new(ssl_key),
-  :SSLCertificate => OpenSSL::X509::Certificate.new(ssl_cert),
-  :SSLCertName => [["CN", WEBrick::Utils::getservername]],
-}
+  {
+    :BindAddress => "127.0.0.1",
+    :Port => options.fetch(:port, 3131),
+    :AccessLog => [],
+    :SSLEnable => true,
+    :SSLVerifyClient => OpenSSL::SSL::VERIFY_NONE,
+    :SSLPrivateKey => OpenSSL::PKey::RSA.new(ssl_key),
+    :SSLCertificate => OpenSSL::X509::Certificate.new(ssl_cert),
+    :SSLCertName => [["CN", WEBrick::Utils::getservername]],
+  }
+end
 
 server = WEBrick::HTTPServer.new(server_options)
 server.mount('/', Servlet)
