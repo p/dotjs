@@ -55,6 +55,7 @@ class Servlet < WEBrick::HTTPServlet::AbstractServlet
 end
 
 options = {}
+Servlet.dir = '.'
 
 OptionParser.new do |opts|
   opts.banner = "Usage: djsd [options]"
