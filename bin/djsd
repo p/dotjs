@@ -57,6 +57,13 @@ end
 OptionParser.new do |opts|
   opts.banner = "Usage: djsd [-h|--help] [-v|--version] [-d|--dir PATH]"
 
+  opts.on('-d', '--dir=PATH', '.js directory') do |v|
+    unless File.exist?(v)
+      warn "#{v} does not exist (starting anyway)"
+    end
+    Servlet.dir = v
+  end
+
   opts.on("-h", "--help", "Show usage") do
     puts "Usage: djsd [-h|--help] [-v|--version] [-d|--dir PATH]"
     puts "starts dotjs server in the foreground. kill with ^C"
@@ -66,13 +73,6 @@ OptionParser.new do |opts|
   opts.on("-v", "--version", "Show version") do
     puts "djsd 2.0"
     exit
-  end
-
-  opts.on('-d', '--dir=PATH', '.js directory') do |v|
-    unless File.exist?(v)
-      warn "#{v} does not exist (starting anyway)"
-    end
-    Servlet.dir = v
   end
 end.parse!
 
