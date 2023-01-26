@@ -60,6 +60,10 @@ Servlet.dir = '.'
 OptionParser.new do |opts|
   opts.banner = "Usage: djsd [options]"
 
+  opts.on('-c', '--cert=PATH', 'Path to TLS certificate in HTTPS mode') do |v|
+    options[:tls_cert] = v
+  end
+
   opts.on('-d', '--dir=PATH', '.js directory') do |v|
     unless File.exist?(v)
       warn "#{v} does not exist (starting anyway)"
@@ -71,6 +75,10 @@ OptionParser.new do |opts|
     puts opts
     puts "starts dotjs server in the foreground. kill with ^C"
     exit
+  end
+
+  opts.on('-k', '--key=PATH', 'Path to TLS private key in HTTPS mode') do |v|
+    options[:tls_key] = v
   end
 
   opts.on('-p', '--port=PORT', 'Port number to bind to (default: 3131)') do |v|
@@ -98,6 +106,13 @@ else
   ssl_info = DATA.read
   ssl_cert = ssl_info.scan(/(-----BEGIN CERTIFICATE-----.+?-----END CERTIFICATE-----)/m)[0][0]
   ssl_key  = ssl_info.scan(/(-----BEGIN RSA PRIVATE KEY-----.+?-----END RSA PRIVATE KEY-----)/m)[0][0]
+
+  if path = options[:tls_cert]
+    ssl_cert = File.read(path)
+  end
+  if path = options[:tls_key]
+    ssl_key = File.read(path)
+  end
 
   {
     :BindAddress => "127.0.0.1",
